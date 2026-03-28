@@ -37,6 +37,11 @@ def brief():
     return render_template("brief.html")
 
 
+@app.route("/brief")
+def brief_legacy():
+    return redirect(url_for("brief"))
+
+
 @app.route("/portfolio")
 def index():
     portfolio = get_portfolio()

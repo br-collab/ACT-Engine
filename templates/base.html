@@ -151,7 +151,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent2)}
   <span class="nav-brand">Aureon</span>
   <div class="nav-links">
     <a href="/portfolio" class="nav-link {% if '/portfolio' in request.path %}active{% endif %}">Portfolio</a>
-    <a href="/brief" class="nav-link {% if '/brief' in request.path %}active{% endif %}">Concept brief</a>
+    <a href="/" class="nav-link {% if request.path=='/' or '/brief' in request.path %}active{% endif %}">Concept brief</a>
     <a href="/mapper" class="nav-link {% if '/mapper' in request.path %}active{% endif %}">Taxonomy mapper</a>
     <a href="/audit" class="nav-link {% if '/audit' in request.path %}active{% endif %}">Audit log</a>
   </div>
