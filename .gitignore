@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+env/
+venv/
+.env
+
+# Database — do not commit live data
+data/aureon.db
+*.db
+
+# Uploads — transient, never commit client docs
+uploads/*
+!uploads/.gitkeep
+
+# Vercel
+.vercel
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

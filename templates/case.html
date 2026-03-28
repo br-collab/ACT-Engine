@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}{{ case.name }} — Aureon{% endblock %}
+{% block content %}
+<div class="page">
+
+{% set is_act = case.practice == 'transformation' %}
+{% set is_ob  = case.practice == 'onboarding' %}
+
+<div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between">
+  <div>
+    <div class="breadcrumb"><a href="/portfolio">Portfolio</a> / {{ case.name }}</div>
+    <div class="page-title">{{ case.name }}</div>
+    <div class="page-sub" style="display:flex;align-items:center;gap:10px;margin-top:6px">
+      {% if is_act %}<span class="practice-act">ACT Transformation</span>
+      {% else %}<span class="practice-ob">Onboarding Intelligence</span>{% endif %}
+      <span>{{ case.client }}</span>
+      {% if case.module %}<span>· {{ case.module|upper }}</span>{% endif %}
+      {% if case.week %}<span>· Week {{ case.week }} of {{ case.total_weeks }}</span>{% endif %}
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    {% if is_act %}<a href="/mapper?case_id={{ case.id }}" class="btn">Taxonomy mapper</a>{% endif %}
+    <button class="btn" onclick="fetchDigest()">Weekly digest</button>
+  </div>
+</div>
+
+<!-- METRICS -->
+{% set ws = case.workstreams %}
+{% set on_track = ws|selectattr('status','eq','on_track')|list|length %}
+{% set cleared_gates = case.gates|selectattr('status','eq','cleared')|list|length %}
+
+<div class="grid-4" style="margin-bottom:20px">
+  <div class="metric">
+    <div class="metric-label">Overall progress</div>
+    <div class="metric-value">{{ case.overall_pct }}%</div>
+    <div class="metric-sub up">{{ on_track }}/{{ ws|length }} workstreams on track</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">HITL gates</div>
+    <div class="metric-value">{{ cleared_gates }}/{{ case.gates|length }}</div>
+    <div class="metric-sub {% if case.blocking_gates > 0 %}down{% elif cleared_gates == case.gates|length %}up{% else %}warn{% endif %}">
+      {% if case.blocking_gates > 0 %}{{ case.blocking_gates }} blocking{% elif cleared_gates == case.gates|length %}All cleared{% else %}{{ case.gates|selectattr('status','eq','open')|list|length }} open{% endif %}
+    </div>
+  </div>
+  {% if is_act %}
+  <div class="metric">
+    <div class="metric-label">Fields mapped</div>
+    <div class="metric-value">{{ case.mappings|length }}</div>
+    <div class="metric-sub up">Auto-mapped by engine</div>
+  </div>
+  {% else %}
+  <div class="metric">
+    <div class="metric-label">Stage</div>
+    <div class="metric-value">{{ case.stage }}/{{ case.total_stages }}</div>
+    <div class="metric-sub">Lifecycle progression</div>
+  </div>
+  {% endif %}
+  <div class="metric">
+    <div class="metric-label">Open risks</div>
+    <div class="metric-value" style="color:{% if case.open_risks > 1 %}var(--danger){% elif case.open_risks > 0 %}var(--warn){% else %}var(--success){% endif %}">
+      {{ case.open_risks }}
+    </div>
+    <div class="metric-sub {% if case.open_risks > 0 %}down{% else %}up{% endif %}">
+      {% if case.open_risks > 0 %}Requires attention{% else %}All clear{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:20px">
+
+  <!-- WORKSTREAMS -->
+  <div class="card">
+    <div class="card-title">Workstream status</div>
+    {% for w in ws %}
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;color:var(--text);width:200px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.name }}</span>
+      <div class="prog-track" style="flex:1">
+        <div class="prog-fill {% if w.status=='on_track' %}prog-green{% elif w.status=='needs_attention' %}prog-amber{% else %}prog-gray{% endif %}"
+             style="width:{{ w.progress }}%"></div>
+      </div>
+      <span style="font-size:11px;color:var(--muted);width:28px;text-align:right">{{ w.progress }}%</span>
+      <span class="pill {% if w.status=='on_track' %}pill-green{% elif w.status=='needs_attention' %}pill-amber{% else %}pill-gray{% endif %}" style="width:72px;text-align:center">
+        {% if w.status=='on_track' %}On track{% elif w.status=='needs_attention' %}Attention{% else %}Not started{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- HITL GATES -->
+  <div class="card">
+    <div class="card-title">HITL authority gates</div>
+    {% for gate in case.gates %}
+    <div class="gate-card {% if gate.status=='cleared' %}cleared{% elif gate.status=='open' and gate.blocking %}blocking{% elif gate.status=='open' %}open{% else %}pending{% endif %}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+        <div>
+          <span style="font-size:12px;font-weight:600;color:var(--text)">{{ gate.gate_id }}</span>
+          <span style="font-size:12px;color:var(--muted);margin-left:8px">{{ gate.label }}</span>
+        </div>
+        <span class="pill {% if gate.status=='cleared' %}pill-green{% elif gate.status=='open' and gate.blocking %}pill-red{% elif gate.status=='open' %}pill-amber{% elif gate.status=='escalated' %}pill-purple{% else %}pill-gray{% endif %}">
+          {% if gate.status=='cleared' %}Cleared
+          {% elif gate.status=='open' and gate.blocking %}Blocking
+          {% elif gate.status=='open' %}Open
+          {% elif gate.status=='escalated' %}Escalated
+          {% else %}Pending{% endif %}
+        </span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">
+        Authority: {{ gate.authority }}
+      </div>
+      {% if gate.status == 'cleared' and gate.cleared_by %}
+        <div style="font-size:11px;color:var(--success)">{{ gate.cleared_by }} · {{ gate.cleared_at[:10] if gate.cleared_at else '' }}</div>
+        {% if gate.rationale %}<div style="font-size:11px;color:var(--muted);margin-top:3px;font-style:italic">{{ gate.rationale[:120] }}{% if gate.rationale|length > 120 %}…{% endif %}</div>{% endif %}
+      {% elif gate.status in ('open','pending') %}
+        {% if gate.recommendation %}
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">{{ gate.recommendation[:140] }}{% if gate.recommendation|length > 140 %}…{% endif %}</div>
+        {% endif %}
+        {% if gate.status == 'open' %}
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-primary" onclick="gateAction('{{ gate.gate_id }}','approve')">Approve</button>
+          <button class="btn btn-sm" onclick="gateAction('{{ gate.gate_id }}','escalate')">Escalate</button>
+          <button class="btn btn-sm btn-danger" onclick="gateAction('{{ gate.gate_id }}','reject')">Reject</button>
+        </div>
+        {% endif %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- RISKS + AUDIT -->
+<div class="grid-2" style="margin-bottom:20px">
+
+  <div class="card">
+    <div class="card-title">Open risks</div>
+    {% if case.risks %}
+      {% for r in case.risks %}
+      <div style="padding:10px;background:var(--surface2);border-radius:7px;margin-bottom:8px;
+                  border-left:3px solid {% if r.severity=='red' %}var(--danger){% else %}var(--warn){% endif %}">
+        <div style="font-size:13px;font-weight:500;color:{% if r.severity=='red' %}#f07070{% else %}#f0b84a{% endif %};margin-bottom:3px">{{ r.title }}</div>
+        <div style="font-size:12px;color:var(--muted)">{{ r.description }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="font-size:13px;color:var(--muted)">No open risks.</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-title">Decision system of record</div>
+    <div style="max-height:260px;overflow-y:auto">
+      {% for entry in case.audit[:12] %}
+      <div class="audit-row">
+        <span class="audit-tier {{ entry.tier }}">{{ entry.tier }}</span>
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--text);font-weight:500">{{ entry.event }}</div>
+          <div style="font-size:11px;color:var(--muted)">{{ entry.actor }} · {{ entry.created_at[:16].replace('T',' ') }}</div>
+          {% if entry.detail %}<div style="font-size:11px;color:var(--muted2);margin-top:2px">{{ entry.detail[:100] }}{% if entry.detail|length > 100 %}…{% endif %}</div>{% endif %}
+          <div style="font-size:10px;color:var(--muted2);margin-top:2px;font-family:var(--mono)">⌗ {{ entry.fingerprint }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <a href="/audit?case_id={{ case.id }}" style="font-size:11px;color:var(--accent2);display:block;margin-top:10px">View full audit log →</a>
+  </div>
+</div>
+
+<!-- DIGEST CARD -->
+<div class="card" id="digest-card" style="display:none;margin-bottom:20px">
+  <div class="card-title">Weekly digest</div>
+  <div id="digest-content" style="font-size:13px;color:var(--muted);line-height:1.8"></div>
+</div>
+
+<!-- CHATBOT -->
+<div class="card">
+  <div class="card-title">Engagement assistant</div>
+  <div id="chat-messages" style="min-height:100px;max-height:260px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:8px">
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--muted);max-width:80%">
+      Ask me about this {% if is_act %}transformation{% else %}onboarding{% endif %} — risks, gate status, next steps, priorities.
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <input id="chat-input" type="text" placeholder="e.g. What's blocking go-live?" style="flex:1"
+           onkeydown="if(event.key==='Enter') sendChat()">
+    <button class="btn btn-primary" onclick="sendChat()">Send</button>
+  </div>
+  <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+    <button class="btn btn-sm" onclick="quickAsk('What are the top risks right now?')">Top risks</button>
+    <button class="btn btn-sm" onclick="quickAsk('Which gates are blocking progress?')">Blocking gates</button>
+    <button class="btn btn-sm" onclick="quickAsk('What should the team prioritize this week?')">This week</button>
+    <button class="btn btn-sm" onclick="quickAsk('Are we on track for go-live?')">Go-live status</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const CASE_ID  = "{{ case.id }}";
+const PRACTICE = "{{ case.practice }}";
+
+async function gateAction(gateId, action) {
+  const rationale = prompt(`Rationale for ${action} on ${gateId}:`);
+  if (!rationale) return;
+  const r = await fetch('/api/gate/action', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({case_id:CASE_ID, gate_id:gateId, action, rationale, practice:PRACTICE})
+  });
+  if (r.ok) window.location.reload();
+}
+
+async function fetchDigest() {
+  const r = await fetch(`/api/digest/${CASE_ID}`);
+  const d = await r.json();
+  const card = document.getElementById('digest-card');
+  const ws_list = d.workstreams.map(w => `<div style="margin-bottom:4px">· ${w.name} — ${w.progress}%</div>`).join('');
+  const risk_list = d.risks.map(r => `<div style="color:${r.severity==='red'?'#f07070':'#f0b84a'};margin-bottom:4px">⚠ ${r.title}</div>`).join('');
+  document.getElementById('digest-content').innerHTML = `
+    <div style="font-weight:500;color:var(--text);margin-bottom:8px">${d.subject}</div>
+    <div style="margin-bottom:12px">${d.summary}</div>
+    ${ws_list}${risk_list}
+    <div style="font-size:11px;color:var(--muted);margin-top:12px">Auto-generated · Would dispatch via email in production</div>`;
+  card.style.display = 'block';
+  card.scrollIntoView({behavior:'smooth'});
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  appendMsg(msg,'user');
+  const thinkId = 'think-' + Date.now();
+  appendMsg('…','bot',thinkId);
+  try {
+    const r = await fetch('/api/chat',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({message:msg,case_id:CASE_ID})
+    });
+    const d = await r.json();
+    document.getElementById(thinkId).remove();
+    appendMsg(d.response,'bot');
+  } catch(e) {
+    document.getElementById(thinkId).remove();
+    appendMsg('API unavailable in sandbox. Set ANTHROPIC_API_KEY to activate.','bot');
+  }
+}
+
+function quickAsk(q){ document.getElementById('chat-input').value=q; sendChat(); }
+
+function appendMsg(text,role,id){
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  if(id) div.id=id;
+  div.style.cssText=`background:${role==='user'?'rgba(55,138,221,0.1)':'var(--surface2)'};
+    border-radius:8px;padding:9px 13px;font-size:13px;max-width:85%;
+    ${role==='user'?'align-self:flex-end;color:#70b8f0':'color:var(--text)'}`;
+  div.textContent=text;
+  box.appendChild(div);
+  box.scrollTop=box.scrollHeight;
+}
+</script>
+{% endblock %}

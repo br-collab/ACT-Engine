@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>{% block title %}Aureon Engine{% endblock %}</title>
+<style>
+:root{
+  --bg:#08090d;--surface:#0f1118;--surface2:#161a24;--surface3:#1c2130;
+  --border:#222736;--border2:#2d3448;
+  --accent:#1D9E75;--accent2:#378ADD;--accent3:#7F77DD;
+  --warn:#BA7517;--danger:#A32D2D;--success:#1D9E75;
+  --text:#e4e2db;--muted:#6e6d67;--muted2:#4a4944;
+  --font:'DM Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono','Fira Code',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);
+     font-size:14px;line-height:1.6;min-height:100vh}
+a{color:var(--accent2);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* NAV */
+nav{background:var(--surface);border-bottom:1px solid var(--border);
+    padding:0 28px;display:flex;align-items:center;gap:0;height:52px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:13px;font-weight:700;letter-spacing:0.1em;color:var(--accent);
+           text-transform:uppercase;padding-right:32px;border-right:1px solid var(--border);margin-right:20px}
+.nav-section{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;
+             color:var(--muted2);padding-right:10px;margin-right:4px}
+.nav-links{display:flex;gap:2px;flex:1}
+.nav-link{padding:6px 12px;border-radius:6px;font-size:13px;color:var(--muted);transition:all 0.15s}
+.nav-link:hover{background:var(--surface2);color:var(--text);text-decoration:none}
+.nav-link.active{background:var(--surface2);color:var(--text)}
+.nav-divider{width:1px;background:var(--border);height:24px;margin:0 12px}
+.nav-tag{font-size:10px;background:rgba(29,158,117,0.12);color:var(--accent);
+         border:1px solid rgba(29,158,117,0.25);padding:2px 8px;border-radius:10px;
+         letter-spacing:0.06em;font-weight:600}
+
+/* LAYOUT */
+.page{max-width:1240px;margin:0 auto;padding:28px 28px}
+.page-header{margin-bottom:24px}
+.page-title{font-size:20px;font-weight:600;color:var(--text)}
+.page-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.breadcrumb{font-size:12px;color:var(--muted);margin-bottom:6px}
+.breadcrumb a{color:var(--muted)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
+.card-sm{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.card-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+            letter-spacing:0.07em;margin-bottom:14px}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+
+/* METRIC */
+.metric{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+.metric-value{font-size:26px;font-weight:600;line-height:1;color:var(--text)}
+.metric-sub{font-size:11px;color:var(--muted);margin-top:5px}
+.metric-sub.up{color:var(--success)}
+.metric-sub.warn{color:var(--warn)}
+.metric-sub.down{color:var(--danger)}
+
+/* PILLS */
+.pill{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;
+      border-radius:20px;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap}
+.pill-green{background:rgba(29,158,117,0.12);color:#4fd6a8;border:1px solid rgba(29,158,117,0.25)}
+.pill-amber{background:rgba(186,117,23,0.12);color:#f0b84a;border:1px solid rgba(186,117,23,0.25)}
+.pill-red{background:rgba(163,45,45,0.12);color:#f07070;border:1px solid rgba(163,45,45,0.25)}
+.pill-blue{background:rgba(55,138,221,0.12);color:#70b8f0;border:1px solid rgba(55,138,221,0.25)}
+.pill-purple{background:rgba(127,119,221,0.12);color:#b0a8f0;border:1px solid rgba(127,119,221,0.25)}
+.pill-gray{background:rgba(110,109,103,0.12);color:var(--muted);border:1px solid var(--border)}
+
+/* PROGRESS */
+.prog-track{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width 0.4s ease}
+.prog-green{background:var(--success)}
+.prog-amber{background:var(--warn)}
+.prog-red{background:var(--danger)}
+.prog-gray{background:var(--border2)}
+
+/* GATE CARD */
+.gate-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+           padding:14px;margin-bottom:10px}
+.gate-card.blocking{border-left:3px solid var(--danger)}
+.gate-card.open{border-left:3px solid var(--warn)}
+.gate-card.cleared{border-left:3px solid var(--success)}
+.gate-card.pending{border-left:3px solid var(--muted2)}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;
+        padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.tbl td{padding:9px 12px;border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--surface2)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;
+     font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);
+     background:var(--surface2);color:var(--text);transition:all 0.15s;font-family:var(--font)}
+.btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{opacity:0.88}
+.btn-danger{background:rgba(163,45,45,0.15);border-color:var(--danger);color:#f07070}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* INPUTS */
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:7px;padding:7px 12px;font-size:13px;
+  font-family:var(--font);width:100%;outline:none;transition:border-color 0.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent2)}
+
+/* AUDIT ROW */
+.audit-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.audit-row:last-child{border-bottom:none}
+.audit-tier{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;
+            background:var(--surface3);color:var(--muted);white-space:nowrap;margin-top:2px}
+.audit-tier.L4{background:rgba(127,119,221,0.15);color:#b0a8f0}
+.audit-tier.L3{background:rgba(55,138,221,0.15);color:#70b8f0}
+.audit-tier.L2{background:rgba(186,117,23,0.15);color:#f0b84a}
+.audit-tier.L1{background:rgba(29,158,117,0.15);color:#4fd6a8}
+
+/* PRACTICE BADGE */
+.practice-act{background:rgba(29,158,117,0.12);color:var(--accent);
+              border:1px solid rgba(29,158,117,0.25);padding:2px 8px;
+              border-radius:5px;font-size:10px;font-weight:600;text-transform:uppercase}
+.practice-ob{background:rgba(127,119,221,0.12);color:#b0a8f0;
+             border:1px solid rgba(127,119,221,0.25);padding:2px 8px;
+             border-radius:5px;font-size:10px;font-weight:600;text-transform:uppercase}
+
+/* RESPONSIVE */
+@media (max-width: 900px){
+  nav{padding:12px 18px;height:auto;flex-wrap:wrap;gap:10px}
+  .nav-brand{padding-right:16px;margin-right:8px}
+  .nav-links{flex-wrap:wrap}
+  .page{padding:22px 18px}
+  .grid-2,.grid-3,.grid-4,.grid-6{grid-template-columns:1fr}
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">Aureon</span>
+  <div class="nav-links">
+    <a href="/portfolio" class="nav-link {% if '/portfolio' in request.path %}active{% endif %}">Portfolio</a>
+    <a href="/brief" class="nav-link {% if '/brief' in request.path %}active{% endif %}">Concept brief</a>
+    <a href="/mapper" class="nav-link {% if '/mapper' in request.path %}active{% endif %}">Taxonomy mapper</a>
+    <a href="/audit" class="nav-link {% if '/audit' in request.path %}active{% endif %}">Audit log</a>
+  </div>
+  <span class="nav-tag">Stage 0 — internal demo</span>
+</nav>
+
+{% block content %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,1 @@
+# Aureon Engine — core package

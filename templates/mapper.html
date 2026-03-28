@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Taxonomy Mapper — Aureon{% endblock %}
+{% block content %}
+<div class="page">
+<div class="page-header">
+  <div class="page-title">Taxonomy mapper</div>
+  <div class="page-sub">Practice-agnostic field translation · Upload or paste · Engine maps to target platform</div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px">
+      <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px">Case</label>
+      <select id="sel-case" onchange="updateCase()">
+        {% for c in all_cases %}
+        <option value="{{ c.id }}" data-practice="{{ c.module or 'aladdin' }}"
+                {% if c.id == case.get('id','ACT-001') %}selected{% endif %}>
+          {{ c.name }} ({{ c.practice }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div style="flex:1;min-width:160px">
+      <label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px">Target platform</label>
+      <select id="sel-practice">
+        <option value="aladdin" {% if practice=='aladdin' %}selected{% endif %}>Aladdin (BlackRock)</option>
+        <option value="simcorp" {% if practice=='simcorp' %}selected{% endif %}>SimCorp Dimension</option>
+        <option value="charles_river" {% if practice=='charles_river' %}selected{% endif %}>Charles River IMS</option>
+        <option value="federal" {% if practice=='federal' %}selected{% endif %}>Federal / Gov (OMB)</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:16px">
+  <div class="card">
+    <div class="card-title">Upload document</div>
+    <div id="drop-zone" style="border:1px dashed var(--border2);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.15s;margin-bottom:14px"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+         ondragleave="this.style.borderColor='var(--border2)'"
+         ondrop="handleDrop(event)">
+      <div style="font-size:13px;color:var(--muted)">Drop PDF, DOCX, TXT, or CSV</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:4px">or click to browse</div>
+      <input type="file" id="file-input" accept=".pdf,.docx,.txt,.csv" style="display:none" onchange="handleFile(this.files[0])">
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--muted2);margin-bottom:12px">— or paste field names —</div>
+    <textarea id="paste-fields" rows="6" placeholder="portfolio_id&#10;ISIN&#10;Trade Date&#10;Market Value&#10;asset_class&#10;…"></textarea>
+    <button class="btn btn-primary" style="width:100%;margin-top:10px;justify-content:center" onclick="runPaste()">Map fields</button>
+  </div>
+
+  <div class="card" id="results-panel" style="display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:220px">
+    <div style="font-size:13px;color:var(--muted);text-align:center">Upload a document or paste fields to see mapping results</div>
+  </div>
+</div>
+
+<div class="card" id="mapping-card" style="display:none">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div class="card-title" style="margin:0">Field mapping results</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="filter('all')">All</button>
+      <button class="btn btn-sm" onclick="filter('auto')">Auto-mapped</button>
+      <button class="btn btn-sm" onclick="filter('review')">Review queue</button>
+      <button class="btn btn-sm" onclick="filter('no_match')">No match</button>
+    </div>
+  </div>
+  <table class="tbl">
+    <thead><tr><th>Client field</th><th>→ Target field</th><th>Confidence</th><th>Status</th></tr></thead>
+    <tbody id="map-tbody"></tbody>
+  </table>
+</div>
+</div>
+
+<script>
+let allMaps = [];
+function updateCase(){ window.location.href=`/mapper?case_id=${document.getElementById('sel-case').value}`; }
+function handleDrop(e){ e.preventDefault(); document.getElementById('drop-zone').style.borderColor='var(--border2)'; handleFile(e.dataTransfer.files[0]); }
+function handleFile(file){
+  if(!file) return;
+  document.getElementById('drop-zone').innerHTML=`<div style="color:var(--accent);font-size:13px">Processing: ${file.name}</div>`;
+  const fd=new FormData(); fd.append('file',file);
+  fd.append('practice',document.getElementById('sel-practice').value);
+  fd.append('case_id',document.getElementById('sel-case').value);
+  fetch('/api/map/upload',{method:'POST',body:fd}).then(r=>r.json()).then(showResults).catch(()=>{
+    document.getElementById('drop-zone').innerHTML='<div style="color:var(--danger);font-size:13px">Upload failed</div>';
+  });
+}
+function runPaste(){
+  const text=document.getElementById('paste-fields').value.trim(); if(!text) return;
+  fetch('/api/map/text',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text,practice:document.getElementById('sel-practice').value,
+    case_id:document.getElementById('sel-case').value})}).then(r=>r.json()).then(showResults);
+}
+function showResults(d){
+  allMaps=d.mappings||[];
+  const c=d.pct_automated>=80?'var(--success)':d.pct_automated>=60?'var(--warn)':'var(--danger)';
+  document.getElementById('results-panel').innerHTML=`
+    <div class="grid-3" style="width:100%;gap:10px">
+      <div class="metric" style="text-align:center"><div class="metric-label">Total</div><div class="metric-value">${d.total}</div></div>
+      <div class="metric" style="text-align:center"><div class="metric-label">Auto-mapped</div><div class="metric-value" style="color:${c}">${d.pct_automated}%</div><div class="metric-sub">${d.auto} fields</div></div>
+      <div class="metric" style="text-align:center"><div class="metric-label">Review queue</div><div class="metric-value" style="color:var(--warn)">${d.review}</div><div class="metric-sub">${d.no_match} no match</div></div>
+    </div>
+    ${d.hitl_required?'<div style="margin-top:12px;font-size:12px;color:#f0b84a;text-align:center">HITL-3 gate opened — confidence review required</div>':''}
+    ${d.source_file?`<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center">${d.source_file}</div>`:''}`;
+  document.getElementById('results-panel').style.display='block';
+  const tbody=document.getElementById('map-tbody'); tbody.innerHTML='';
+  allMaps.forEach(m=>{
+    const conf=Math.round(m.confidence*100);
+    const bc=conf>=85?'var(--success)':conf>=60?'var(--warn)':'var(--danger)';
+    const pill=m.status==='auto'?'<span class="pill pill-green">Auto</span>':m.status==='review'?'<span class="pill pill-amber">Review</span>':'<span class="pill pill-red">No match</span>';
+    const tr=document.createElement('tr'); tr.dataset.status=m.status;
+    tr.innerHTML=`<td style="font-family:var(--mono);font-size:12px;color:var(--accent2)">${m.client_field}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:${m.target_field?'var(--text)':'var(--muted)'}">${m.target_field||'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="prog-track" style="flex:1;height:4px"><div class="prog-fill" style="width:${conf}%;background:${bc}"></div></div>
+        <span style="font-size:11px;color:var(--muted);width:28px;text-align:right">${conf}%</span>
+      </div></td><td>${pill}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('mapping-card').style.display='block';
+}
+function filter(s){ document.querySelectorAll('#map-tbody tr').forEach(r=>{ r.style.display=(s==='all'||r.dataset.status===s)?'':'none'; }); }
+</script>
+{% endblock %}
