@@ -16,6 +16,7 @@ from core.db import init_db, get_case, get_portfolio, save_mappings, get_conn, t
 from core.taxonomy import get_dictionary, extract_fields, run_mapping
 from core.gates import act_on_gate, get_gates, open_gate
 from core.audit import log
+from workflow_design import register_workflow_routes
 
 BASE = Path(__file__).parent
 app  = Flask(__name__,
@@ -23,9 +24,13 @@ app  = Flask(__name__,
              static_folder=str(BASE / "static"))
 app.config["UPLOAD_FOLDER"] = str(BASE / "uploads")
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+app.secret_key = "aureon-dev-key-change-in-prod"   # Required for Flask internals
 
 Path(app.config["UPLOAD_FOLDER"]).mkdir(exist_ok=True)
 init_db()
+
+# Register workflow design routes (adds 7 routes under /workflow)
+register_workflow_routes(app, get_conn)
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -293,11 +298,17 @@ Current case state:
 
 @app.route("/api/health")
 def health():
-    return jsonify({"status": "ok", "engine": "Aureon v1.0", "practices": ["transformation","onboarding"]})
+    return jsonify({
+        "status":    "ok",
+        "engine":    "Aureon v1.1",
+        "practices": ["transformation", "onboarding", "workflow_design"],
+        "routes":    24,
+    })
 
 
 if __name__ == "__main__":
-    print("\n  Aureon Engine — unified platform")
-    print("  Practices: ACT Transformation + Onboarding Intelligence")
+    print("\n  Aureon Engine v1.1 — unified platform")
+    print("  Practices: ACT Transformation + Onboarding Intelligence + Workflow Design")
+    print("  Routes: 17 core + 7 workflow = 24 total")
     print("  http://localhost:5055\n")
     app.run(debug=True, port=5055)
