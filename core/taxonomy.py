@@ -42,7 +42,7 @@ ALADDIN = {
         "identifier", "benchmark", "portfolio"
     ),
     "aum": _entry(
-        ["aum", "assets under management", "nav", "net asset value", "fund size"],
+        ["aum", "assets under management", "fund size"],
         "amount", "portfolio", "portfolio"
     ),
     "inception_date": _entry(
@@ -181,6 +181,96 @@ ALADDIN = {
         ["lei", "legal entity identifier", "bic", "swift", "entity code"],
         "identifier", "client", "client"
     ),
+    # --- PATCH v1.1: explicit entries for fields missing from dictionary ---
+    "custodian": _entry(
+        ["custodian", "custodian name", "custodian bank", "safekeeping bank",
+         "custody bank", "custodian_name", "sub-custodian"],
+        "name", "counterparty", "counterparty"
+    ),
+    "corporate_action": _entry(
+        ["corporate action", "corporate action type", "corporate_action_type",
+         "ca type", "event type", "action type", "corporate event"],
+        "category", "trade", "security"
+    ),
+    "corporate_action_id": _entry(
+        ["corporate action id", "corporate_action_id", "ca id",
+         "event id", "action id", "ca reference"],
+        "identifier", "trade", "security"
+    ),
+    "order_id": _entry(
+        ["order id", "order_id", "order reference", "order number",
+         "ticket id", "instruction id"],
+        "identifier", "trade", "trade"
+    ),
+    "trade_status": _entry(
+        ["trade status", "trade_status", "order status", "execution status",
+         "settlement status", "booking status", "lifecycle status"],
+        "status", "trade", "trade"
+    ),
+    "position_date": _entry(
+        ["position date", "position_date", "as of date", "valuation date",
+         "pricing date", "holding date"],
+        "date", "position", "position"
+    ),
+    "report_date": _entry(
+        ["report date", "report_date", "reporting date", "statement date",
+         "run date", "extraction date", "as at date"],
+        "date", "event", "portfolio"
+    ),
+    "nav": _entry(
+        ["nav", "net asset value", "fund nav", "total nav", "portfolio nav"],
+        "amount", "portfolio", "portfolio"
+    ),
+    "abor_position": _entry(
+        ["abor position", "abor_position", "accounting position",
+         "accounting book of record", "abor balance"],
+        "amount", "position", "position"
+    ),
+    "ibor_position": _entry(
+        ["ibor position", "ibor_position", "investment position",
+         "investment book of record", "ibor balance"],
+        "amount", "position", "position"
+    ),
+    "recon_break": _entry(
+        ["recon break", "recon_break_flag", "break flag", "reconciliation break",
+         "position break", "cash break", "break indicator"],
+        "status", "position", "position"
+    ),
+    "recon_break_amount": _entry(
+        ["break amount", "break_amount", "recon break amount",
+         "break value", "discrepancy amount"],
+        "amount", "position", "position"
+    ),
+    "recon_break_reason": _entry(
+        ["break reason", "break_reason", "recon break reason",
+         "break description", "discrepancy reason", "break narrative"],
+        "name", "position", "position"
+    ),
+    "sector_code": _entry(
+        ["sector code", "sector_code", "gics code", "industry code",
+         "sector classification", "sector id"],
+        "identifier", "security", "security"
+    ),
+    "payment_date": _entry(
+        ["payment date", "payment_date", "income date", "dividend date",
+         "coupon payment date", "cash date"],
+        "date", "trade", "security"
+    ),
+    "record_date": _entry(
+        ["record date", "record_date", "holder of record date",
+         "books close date", "ca record date"],
+        "date", "trade", "security"
+    ),
+    "fund_code": _entry(
+        ["fund code", "fund_code", "internal fund code", "strategy code",
+         "fund identifier", "fund ref"],
+        "identifier", "portfolio", "portfolio"
+    ),
+    "benchmark_id": _entry(
+        ["benchmark id", "benchmark_id", "benchmark code", "index id",
+         "reference index id", "comparator id"],
+        "identifier", "benchmark", "portfolio"
+    ),
 }
 
 FEDERAL = {
@@ -317,11 +407,21 @@ def _normalize(field_name: str) -> str:
     return field_name.lower().replace("_", " ").replace("-", " ").strip()
 
 
+def _keyword_match(field_name: str, normalized: str, keyword: str) -> bool:
+    if " " in keyword:
+        return keyword in normalized
+    if keyword.startswith("_"):
+        return field_name.lower().endswith(keyword)
+
+    tokens = normalized.split()
+    return keyword in tokens
+
+
 def _infer_type(field_name: str) -> str:
     normalized = _normalize(field_name)
     scores = {}
     for inferred_type, keywords in TYPE_KEYWORDS.items():
-        score = sum(1 for keyword in keywords if keyword in normalized or field_name.lower().endswith(keyword))
+        score = sum(1 for keyword in keywords if _keyword_match(field_name, normalized, keyword))
         if score:
             scores[inferred_type] = score
     return max(scores, key=scores.get) if scores else "unknown"
@@ -331,7 +431,7 @@ def _infer_domain(field_name: str) -> str:
     normalized = _normalize(field_name)
     scores = {}
     for domain, keywords in DOMAIN_KEYWORDS.items():
-        score = sum(1 for keyword in keywords if keyword in normalized)
+        score = sum(1 for keyword in keywords if _keyword_match(field_name, normalized, keyword))
         if score:
             scores[domain] = score
     return max(scores, key=scores.get) if scores else "unknown"
