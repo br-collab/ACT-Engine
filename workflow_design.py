@@ -234,9 +234,12 @@ def _parse_gap_analysis_json(text: str) -> dict:
     return json.loads(_extract_json_object(text))
 
 
-def _repair_gap_analysis_json(client, raw_text: str) -> dict:
+def _repair_gap_analysis_json(client, raw_text: str, error_message: str = "") -> str:
+    error_context = f"\nParsing error: {error_message}\n" if error_message else "\n"
     repair_prompt = f"""Repair the following malformed JSON into a single valid JSON object.
 Return JSON only. Do not add markdown fences or commentary.
+Preserve the data, only fix JSON syntax and escaping.
+{error_context}
 
 {raw_text}"""
     response = client.messages.create(
@@ -244,8 +247,21 @@ Return JSON only. Do not add markdown fences or commentary.
         max_tokens=4000,
         messages=[{"role": "user", "content": repair_prompt}]
     )
-    repaired = response.content[0].text.strip()
-    return _parse_gap_analysis_json(repaired)
+    return response.content[0].text.strip()
+
+
+def _parse_model_json_with_repair(client, raw_text: str, max_repairs: int = 2) -> dict:
+    current_text = raw_text
+    last_error = None
+
+    for _ in range(max_repairs + 1):
+        try:
+            return _parse_gap_analysis_json(current_text)
+        except (json.JSONDecodeError, ValueError) as exc:
+            last_error = exc
+            current_text = _repair_gap_analysis_json(client, current_text, str(exc))
+
+    raise last_error or ValueError("Unable to parse model JSON.")
 
 
 def get_workflow_vocab_text() -> str:
@@ -341,10 +357,7 @@ def run_transformation_design(intake: dict, extracted_text: str) -> dict:
         messages=[{"role": "user", "content": build_transformation_design_prompt(intake, extracted_text)}]
     )
     raw = response.content[0].text.strip()
-    try:
-        return _parse_gap_analysis_json(raw)
-    except (json.JSONDecodeError, ValueError):
-        return _repair_gap_analysis_json(client, raw)
+    return _parse_model_json_with_repair(client, raw)
 
 
 def build_document_intake(form) -> dict:
@@ -510,10 +523,7 @@ def run_gap_analysis(intake: dict) -> dict:
         messages=[{"role": "user", "content": build_gap_analysis_prompt(intake)}]
     )
     raw = response.content[0].text.strip()
-    try:
-        return _parse_gap_analysis_json(raw)
-    except (json.JSONDecodeError, ValueError):
-        return _repair_gap_analysis_json(client, raw)
+    return _parse_model_json_with_repair(client, raw)
 
 
 def fingerprint_register(mapping_register: list, engagement_id: str) -> list:
