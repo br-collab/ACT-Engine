@@ -159,6 +159,44 @@ def get_anthropic_client():
     from anthropic import Anthropic
     return Anthropic(api_key=api_key)
 
+
+def _strip_code_fences(text: str) -> str:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        parts = cleaned.split("```")
+        if len(parts) >= 2:
+            cleaned = parts[1]
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:]
+    return cleaned.strip()
+
+
+def _extract_json_object(text: str) -> str:
+    cleaned = _strip_code_fences(text)
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        raise ValueError("Model response did not contain a JSON object.")
+    return cleaned[start:end + 1]
+
+
+def _parse_gap_analysis_json(text: str) -> dict:
+    return json.loads(_extract_json_object(text))
+
+
+def _repair_gap_analysis_json(client, raw_text: str) -> dict:
+    repair_prompt = f"""Repair the following malformed JSON into a single valid JSON object.
+Return JSON only. Do not add markdown fences or commentary.
+
+{raw_text}"""
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4000,
+        messages=[{"role": "user", "content": repair_prompt}]
+    )
+    repaired = response.content[0].text.strip()
+    return _parse_gap_analysis_json(repaired)
+
 def build_gap_analysis_prompt(intake: dict) -> str:
     asset_classes = intake.get("asset_classes", [])
     vocab = {}
@@ -258,12 +296,10 @@ def run_gap_analysis(intake: dict) -> dict:
         messages=[{"role": "user", "content": build_gap_analysis_prompt(intake)}]
     )
     raw = response.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
-    return json.loads(raw)
+    try:
+        return _parse_gap_analysis_json(raw)
+    except (json.JSONDecodeError, ValueError):
+        return _repair_gap_analysis_json(client, raw)
 
 
 def fingerprint_register(mapping_register: list, engagement_id: str) -> list:
