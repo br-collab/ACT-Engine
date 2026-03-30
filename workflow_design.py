@@ -367,7 +367,17 @@ Return a single valid JSON object. No markdown fences. No prose outside JSON.
   "operating_model_changes": "...",
   "handoff_to_execution_lead": "...",
   "handoff_to_delivery_lead": "..."
-}}"""
+}}
+
+Rules:
+- Every workflow stream and gap you identify must appear in the transformation_register.
+- Minimum 6 transformation streams. Maximum 20 rows.
+- data_conversion_summary: required. Minimum 2 sentences. List the specific source systems whose data must be migrated and the primary conversion risk.
+- uat_scope_summary: required. Minimum 2 sentences. Identify which workflow streams require UAT validation and the recommended UAT sequencing.
+- configuration_summary: required. Minimum 2 sentences. List the Aladdin modules that require configuration and the highest-complexity configuration item.
+- operating_model_changes: required. Minimum 2 sentences. Describe the most significant operational process changes the client must make before go-live.
+- handoff_to_execution_lead: required. Minimum 2 sentences. Summarize the critical path items and first workstreams for the project plan.
+- handoff_to_delivery_lead: required. Minimum 2 sentences. Identify standardization opportunities and reusable deliverable candidates.""" 
 
 
 def run_transformation_design(intake: dict, extracted_text: str) -> dict:
@@ -533,7 +543,13 @@ Output a single valid JSON object. No markdown fences. No prose outside the JSON
 Rules:
 - Every playbook item the client mentioned must appear in the register.
 - Infer reasonable gaps; prefix delta with [INFERRED].
-- Minimum 8 rows. Maximum 20 rows."""
+- Minimum 8 rows. Maximum 20 rows.
+- data_conversion_summary: required. Minimum 2 sentences. List the specific source systems whose data must be migrated and the primary conversion risk.
+- uat_scope_summary: required. Minimum 2 sentences. Identify which workflow streams require UAT validation and the recommended UAT sequencing.
+- configuration_summary: required. Minimum 2 sentences. List the Aladdin modules that require configuration and the highest-complexity configuration item.
+- operating_model_changes: required. Minimum 2 sentences. Describe the most significant operational process changes the client must make before go-live.
+- handoff_to_execution_lead: required. Minimum 2 sentences. Summarize the critical path items and first workstreams for the project plan.
+- handoff_to_delivery_lead: required. Minimum 2 sentences. Identify standardization opportunities and reusable deliverable candidates."""
 
 
 def run_gap_analysis(intake: dict) -> dict:
