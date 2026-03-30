@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Aureon Engine — Workflow Design{% endblock %}
+{% block content %}
+<div class="page">
+
+<div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+  <div>
+    <div class="page-title">Workflow design engagements</div>
+    <div class="page-sub">ACT workflow design · Governed intake to HITL review · Director management view</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <a href="/workflow/new" class="btn btn-primary">Start new engagement</a>
+    <a href="/workflow/list" class="btn">JSON endpoint</a>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;padding:18px 20px;background:linear-gradient(135deg, rgba(29,158,117,0.10), rgba(201,168,76,0.10));border-color:rgba(201,168,76,0.22)">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div style="max-width:760px">
+      <div class="card-title" style="margin-bottom:8px;color:var(--text)">Workflow design doctrine</div>
+      <div style="font-size:18px;line-height:1.35;color:var(--text);margin-bottom:6px">Every client playbook becomes a governed transformation register before execution starts.</div>
+      <div style="font-size:13px;color:var(--muted)">Use this view to track active workflow design engagements, open review gates, and cleared artifacts that are ready for Execution Lead and Delivery Lead consumption.</div>
+    </div>
+    <a href="/workflow/new" class="btn btn-primary">Open intake</a>
+  </div>
+</div>
+
+<div class="grid-3" style="margin-bottom:28px">
+  <div class="metric">
+    <div class="metric-label">Workflow engagements</div>
+    <div class="metric-value">{{ workflow_total }}</div>
+    <div class="metric-sub">Artifacts persisted in `workflow_artifacts`</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Pending review</div>
+    <div class="metric-value" style="color:{% if workflow_pending > 0 %}var(--warn){% else %}var(--success){% endif %}">{{ workflow_pending }}</div>
+    <div class="metric-sub {% if workflow_pending > 0 %}warn{% else %}up{% endif %}">Awaiting director clearance</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Cleared artifacts</div>
+    <div class="metric-value" style="color:{% if workflow_cleared > 0 %}var(--success){% else %}var(--muted){% endif %}">{{ workflow_cleared }}</div>
+    <div class="metric-sub">Released to governed artifact view</div>
+  </div>
+</div>
+
+{% if workflow_items %}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+  <span class="practice-act">Workflow Design</span>
+  <span style="font-size:12px;color:var(--muted)">Current-state capture, gap analysis, and HITL governance</span>
+</div>
+
+{% for item in workflow_items %}
+<div class="card" style="margin-bottom:10px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+    <div>
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px">{{ item.engagement_id }}</div>
+      <div style="font-size:12px;color:var(--muted)">Created {{ item.created_at[:10] if item.created_at else "—" }} · Updated {{ item.updated_at[:10] if item.updated_at else "—" }}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      {% if item.gate_status == "cleared" %}
+      <span class="pill pill-green">Gate cleared</span>
+      {% else %}
+      <span class="pill pill-amber">Pending review</span>
+      {% endif %}
+      <a href="{{ item.detail_href }}" class="btn btn-sm">{{ item.detail_label }}</a>
+    </div>
+  </div>
+  <div class="prog-track">
+    <div class="prog-fill {% if item.gate_status == 'cleared' %}prog-green{% else %}prog-amber{% endif %}" style="width:{% if item.gate_status == 'cleared' %}100{% else %}55{% endif %}%"></div>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+  <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">No workflow design engagements yet</div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Start the first governed intake to create a workflow artifact, open the HITL review gate, and surface it here.</div>
+  <a href="/workflow/new" class="btn btn-primary">Start new engagement</a>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

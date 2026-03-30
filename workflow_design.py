@@ -389,6 +389,7 @@ def register_workflow_routes(app, get_conn):
 
     Routes registered
     -----------------
+    GET  /workflow                  Portfolio UI — workflow engagement dashboard
     GET  /workflow/new              Stage 1 — intake form (Front Office Director)
     POST /workflow/analyze          Stage 2 — Claude gap analysis + DB persist
     GET  /workflow/review/<id>      Stage 2 — HITL review screen
@@ -397,6 +398,36 @@ def register_workflow_routes(app, get_conn):
     GET  /workflow/export/<id>      Stage 3 — JSON export (Execution + Delivery Lead)
     GET  /workflow/list             Portfolio — all workflow engagements
     """
+
+    @app.route("/workflow")
+    def workflow_portfolio():
+        from flask import render_template
+
+        conn = get_conn()
+        items = list_artifacts(conn)
+        conn.close()
+
+        pending = [item for item in items if item.get("gate_status") == "pending"]
+        cleared = [item for item in items if item.get("gate_status") == "cleared"]
+
+        enriched = []
+        for item in items:
+            gate_status = item.get("gate_status", "pending")
+            enriched.append({
+                **item,
+                "detail_href": f"/workflow/artifact/{item['engagement_id']}"
+                if gate_status == "cleared"
+                else f"/workflow/review/{item['engagement_id']}",
+                "detail_label": "Open artifact" if gate_status == "cleared" else "Open review",
+            })
+
+        return render_template(
+            "workflow_landing.html",
+            workflow_items=enriched,
+            workflow_total=len(items),
+            workflow_pending=len(pending),
+            workflow_cleared=len(cleared),
+        )
 
     @app.route("/workflow/new")
     def workflow_new():
