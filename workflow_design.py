@@ -25,6 +25,7 @@ import hashlib
 import json
 import os
 import csv
+import re
 import tempfile
 import uuid
 from html import escape
@@ -740,6 +741,7 @@ button:hover{opacity:.85}
             request.form.get("engagement_id", "").strip()
             or f"ACT-WF-{uuid.uuid4().hex[:8].upper()}"
         )
+        engagement_id = re.sub(r"[^A-Za-z0-9\-]", "-", engagement_id)
 
         try:
             extracted_text = extract_document_text(request.files["file"], Path(app.config["UPLOAD_FOLDER"]))
@@ -772,6 +774,9 @@ button:hover{opacity:.85}
 
     @app.route("/workflow/confirm/<engagement_id>")
     def workflow_confirm(engagement_id):
+        from urllib.parse import unquote
+
+        engagement_id = unquote(engagement_id)
         conn = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         conn.close()
@@ -824,7 +829,9 @@ body{{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0a0f;color:#e8e6
     @app.route("/workflow/design/<engagement_id>", methods=["POST"])
     def workflow_design(engagement_id):
         from flask import redirect
+        from urllib.parse import unquote
 
+        engagement_id = unquote(engagement_id)
         conn = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         if not artifact:
@@ -987,6 +994,7 @@ button:hover{opacity:.85}
             request.form.get("engagement_id", "").strip()
             or f"ACT-WF-{uuid.uuid4().hex[:8].upper()}"
         )
+        engagement_id = re.sub(r"[^A-Za-z0-9\-]", "-", engagement_id)
 
         try:
             gap_analysis = run_gap_analysis(intake)
@@ -1009,6 +1017,9 @@ button:hover{opacity:.85}
 
     @app.route("/workflow/review/<engagement_id>")
     def workflow_review(engagement_id):
+        from urllib.parse import unquote
+
+        engagement_id = unquote(engagement_id)
         conn     = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         conn.close()
@@ -1089,7 +1100,9 @@ td{{padding:10px;border-bottom:1px solid #12121a;vertical-align:top}}
     @app.route("/workflow/clear/<engagement_id>", methods=["POST"])
     def workflow_clear(engagement_id):
         from flask import request, redirect
+        from urllib.parse import unquote
 
+        engagement_id = unquote(engagement_id)
         conn     = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         if not artifact:
@@ -1108,6 +1121,9 @@ td{{padding:10px;border-bottom:1px solid #12121a;vertical-align:top}}
 
     @app.route("/workflow/artifact/<engagement_id>")
     def workflow_artifact(engagement_id):
+        from urllib.parse import unquote
+
+        engagement_id = unquote(engagement_id)
         conn     = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         conn.close()
@@ -1295,7 +1311,9 @@ document.addEventListener("DOMContentLoaded", function () {{
     @app.route("/workflow/export/<engagement_id>")
     def workflow_export(engagement_id):
         from flask import jsonify
+        from urllib.parse import unquote
 
+        engagement_id = unquote(engagement_id)
         conn     = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         conn.close()
