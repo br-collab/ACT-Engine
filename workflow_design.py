@@ -556,7 +556,7 @@ def run_gap_analysis(intake: dict) -> dict:
     client = get_anthropic_client()
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=4000,
+        max_tokens=8000,
         messages=[{"role": "user", "content": build_gap_analysis_prompt(intake)}]
     )
     raw = response.content[0].text.strip()
@@ -572,6 +572,28 @@ def fingerprint_register(mapping_register: list, engagement_id: str) -> list:
         row["_audited_at"]     = ts
         row["_engagement_id"]  = engagement_id
     return mapping_register
+
+
+def _synthesize_execution_handoff(register: list) -> str:
+    critical = [r for r in register if r.get("risk_level") == "critical"]
+    first = register[0] if register else {}
+    critical_str = ", ".join(r.get("aladdin_workflow_key", "") for r in critical[:3])
+    return (
+        f"Critical path starts with {first.get('aladdin_workflow_key', '—')} "
+        f"(Week {first.get('suggested_milestone_week', '?')}). "
+        f"Critical gaps requiring immediate project plan entries: {critical_str or '—'}. "
+        f"Total workstreams requiring Execution Lead tracking: {len(register)}."
+    )
+
+
+def _synthesize_delivery_handoff(register: list) -> str:
+    data_items = [r for r in register if r.get("data_conversion_required")]
+    uat_items = [r for r in register if r.get("uat_scope_item")]
+    return (
+        f"{len(data_items)} streams require data conversion — primary standardization opportunity. "
+        f"{len(uat_items)} streams in UAT scope. "
+        f"Reusable deliverable candidates: gap register, risk register, UAT script templates."
+    )
 
 
 def generate_artifact(gap_analysis: dict, intake: dict) -> dict:
@@ -597,8 +619,8 @@ def generate_artifact(gap_analysis: dict, intake: dict) -> dict:
         "mapping_register":          reg_sorted,
         "by_phase":                  phases,
         "by_workstream":             workstreams,
-        "handoff_to_execution_lead": gap_analysis.get("handoff_to_execution_lead"),
-        "handoff_to_delivery_lead":  gap_analysis.get("handoff_to_delivery_lead"),
+        "handoff_to_execution_lead": gap_analysis.get("handoff_to_execution_lead") or _synthesize_execution_handoff(reg_sorted),
+        "handoff_to_delivery_lead":  gap_analysis.get("handoff_to_delivery_lead") or _synthesize_delivery_handoff(reg_sorted),
         "uat_scope":                 [r for r in reg_sorted if r.get("uat_scope_item")],
         "uat_scope_summary":         gap_analysis.get("uat_scope_summary"),
         "data_conversion_scope":     [r for r in reg_sorted if r.get("data_conversion_required")],
@@ -1123,12 +1145,16 @@ td{{padding:10px;border-bottom:1px solid #12121a;vertical-align:top}}
 .clearbox h3{{font-size:13px;color:#4cad7a;margin-bottom:10px}}
 .clearbox input,.clearbox textarea{{width:100%;background:#0a0a0f;border:1px solid #2a3a2a;border-radius:5px;color:#e8e6de;font-size:13px;padding:9px 12px;font-family:inherit;margin-bottom:10px}}
 .btn{{background:#4cad7a;color:#0a0f0a;border:none;border-radius:6px;padding:10px 26px;font-size:13px;font-weight:600;cursor:pointer}}
+.export{{display:inline-block;border:1px solid #2a2a3a;color:#888;padding:7px 16px;border-radius:5px;font-size:12px;text-decoration:none;margin:0 10px 20px 0}}
+.export:hover{{border-color:#c9a84c;color:#c9a84c}}
 </style></head><body>
 <div class="wrap">
   <div class="hdr">
     <h1>HITL Review — {engagement_id}</h1>
     <p>Stage 2 · Gap analysis complete · Gate: PENDING · Director must clear before artifact releases</p>
   </div>
+  <a class="export" href="/workflow">&#8592; Portfolio</a>
+  <a class="export" href="/workflow/new">+ New engagement</a>
   <div class="banner">Gate <strong>workflow_review</strong> is open. Review every row. Correct misclassifications before clearing. No artifact reaches Execution Lead or Delivery Lead until you sign off.</div>
   <div class="stats">
     <div class="stat"><div class="n">{rs.get("total_gaps",0)}</div><div class="l">Total gaps</div></div>
@@ -1308,6 +1334,8 @@ td{{padding:9px 8px;border-bottom:1px solid #0f0f18;vertical-align:top}}
   </div>
   <span class="badge">GATE CLEARED · {gate.get("cleared_by","—")} · {gate.get("cleared_at","")[:10]}</span>
   <a class="export" href="/workflow/export/{engagement_id}">Export JSON &rarr;</a>
+  <a class="export" href="/workflow">&#8592; Portfolio</a>
+  <a class="export" href="/workflow/new">+ New engagement</a>
   <div class="tabs">
     <button class="tab-btn active" data-tab="risk-register">Risk register</button>
     <button class="tab-btn" data-tab="gap-register">Gap register</button>
