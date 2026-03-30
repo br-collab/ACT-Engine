@@ -1073,6 +1073,18 @@ button:hover{opacity:.85}
         if not artifact:
             return f"Engagement {engagement_id} not found.", 404
 
+        td = artifact.get("transformation_design", {})
+        for field in [
+            "data_conversion_summary",
+            "uat_scope_summary",
+            "configuration_summary",
+            "operating_model_changes",
+            "handoff_to_execution_lead",
+            "handoff_to_delivery_lead",
+        ]:
+            if not artifact.get(field) and td.get(field):
+                artifact[field] = td[field]
+
         rs  = artifact.get("risk_summary", {})
         reg = artifact.get("mapping_register", [])
         rc  = {"critical": "#e84c4c", "high": "#e8883a", "medium": "#c9a84c", "low": "#4cad7a"}
