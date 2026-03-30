@@ -1194,6 +1194,18 @@ td{{padding:10px;border-bottom:1px solid #12121a;vertical-align:top}}
             return (f"Gate not cleared. "
                     f"<a href='/workflow/review/{engagement_id}' style='color:#c9a84c'>Return to review</a>"), 403
 
+        td = artifact.get("transformation_design", {})
+        for field in [
+            "data_conversion_summary",
+            "uat_scope_summary",
+            "configuration_summary",
+            "operating_model_changes",
+            "handoff_to_execution_lead",
+            "handoff_to_delivery_lead",
+        ]:
+            if not artifact.get(field) and td.get(field):
+                artifact[field] = td[field]
+
         reg = artifact.get("mapping_register", [])
         transformation_design = artifact.get("transformation_design", {})
         transformation_summary = transformation_design.get("transformation_summary", {})
