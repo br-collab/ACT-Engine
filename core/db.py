@@ -13,6 +13,8 @@ import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
 # Use /tmp on Vercel (serverless), local data/ dir otherwise
 if os.environ.get("VERCEL"):
     DB_PATH = Path("/tmp/aureon.db")
@@ -24,6 +26,29 @@ def get_conn() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def has_external_workflow_store() -> bool:
+    return bool(DATABASE_URL)
+
+
+def get_workflow_store_conn():
+    if DATABASE_URL:
+        try:
+            import psycopg
+            from psycopg.rows import dict_row
+        except ImportError as exc:
+            raise RuntimeError(
+                "DATABASE_URL is set but psycopg is not installed. "
+                "Add psycopg[binary] to requirements.txt."
+            ) from exc
+        return psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    if os.environ.get("VERCEL"):
+        raise RuntimeError(
+            "DATABASE_URL is required on Vercel for workflow persistence. "
+            "SQLite in /tmp cannot safely support the multi-step workflow flow."
+        )
+    return get_conn()
 
 
 def ts() -> str:

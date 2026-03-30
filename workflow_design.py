@@ -31,6 +31,7 @@ from html import escape
 from datetime import datetime, timezone
 from pathlib import Path
 
+from core.db import get_workflow_store_conn
 
 # ---------------------------------------------------------------------------
 # TAXONOMY DICTIONARIES
@@ -110,11 +111,14 @@ def _ensure_table(conn):
             updated_at    TEXT NOT NULL
         )
     """)
-    try:
-        conn.execute("ALTER TABLE workflow_artifacts ADD COLUMN extracted_text TEXT")
-        conn.commit()
-    except Exception:
-        pass
+    if _is_postgres_conn(conn):
+        conn.execute("ALTER TABLE workflow_artifacts ADD COLUMN IF NOT EXISTS extracted_text TEXT")
+    else:
+        try:
+            conn.execute("ALTER TABLE workflow_artifacts ADD COLUMN extracted_text TEXT")
+            conn.commit()
+        except Exception:
+            pass
     conn.commit()
 
 
@@ -122,7 +126,7 @@ def save_artifact(conn, engagement_id: str, artifact: dict):
     _ensure_table(conn)
     now = datetime.now(timezone.utc).isoformat()
     extracted_text = artifact.get("extracted_text", "")
-    conn.execute("""
+    _db_execute(conn, """
         INSERT INTO workflow_artifacts (engagement_id, artifact_json, extracted_text, gate_status, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(engagement_id) DO UPDATE SET
@@ -143,25 +147,53 @@ def save_artifact(conn, engagement_id: str, artifact: dict):
 
 def load_artifact(conn, engagement_id: str):
     _ensure_table(conn)
-    row = conn.execute(
+    row = _db_execute(conn,
         "SELECT artifact_json, extracted_text FROM workflow_artifacts WHERE engagement_id = ?",
         (engagement_id,)
     ).fetchone()
     if not row:
         return None
-    artifact = json.loads(row[0])
-    if len(row) > 1 and row[1] is not None:
-        artifact["extracted_text"] = row[1]
+    artifact_json = _row_value(row, "artifact_json", 0)
+    extracted_text = _row_value(row, "extracted_text", 1)
+    artifact = json.loads(artifact_json)
+    if extracted_text is not None:
+        artifact["extracted_text"] = extracted_text
     return artifact
 
 
 def list_artifacts(conn) -> list:
     _ensure_table(conn)
-    rows = conn.execute(
+    rows = _db_execute(conn,
         "SELECT engagement_id, gate_status, created_at, updated_at "
         "FROM workflow_artifacts ORDER BY created_at DESC"
     ).fetchall()
-    return [dict(r) for r in rows]
+    return [_row_to_dict(r) for r in rows]
+
+
+def _is_postgres_conn(conn) -> bool:
+    return conn.__class__.__module__.startswith("psycopg")
+
+
+def _adapt_sql(conn, sql: str) -> str:
+    if _is_postgres_conn(conn):
+        return sql.replace("?", "%s")
+    return sql
+
+
+def _db_execute(conn, sql: str, params=()):
+    return conn.execute(_adapt_sql(conn, sql), params)
+
+
+def _row_value(row, key: str, index: int):
+    if isinstance(row, dict):
+        return row.get(key)
+    return row[index]
+
+
+def _row_to_dict(row) -> dict:
+    if isinstance(row, dict):
+        return row
+    return dict(row)
 
 
 # ---------------------------------------------------------------------------
@@ -589,7 +621,7 @@ def register_workflow_routes(app, get_conn):
     def workflow_portfolio():
         from flask import render_template
 
-        conn = get_conn()
+        conn = get_workflow_store_conn()
         items = list_artifacts(conn)
         conn.close()
 
@@ -732,7 +764,7 @@ button:hover{opacity:.85}
             },
         }
 
-        conn = get_conn()
+        conn = get_workflow_store_conn()
         save_artifact(conn, engagement_id, artifact)
         conn.close()
 
@@ -740,7 +772,7 @@ button:hover{opacity:.85}
 
     @app.route("/workflow/confirm/<engagement_id>")
     def workflow_confirm(engagement_id):
-        conn = get_conn()
+        conn = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         conn.close()
         if not artifact:
@@ -793,7 +825,7 @@ body{{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0a0f;color:#e8e6
     def workflow_design(engagement_id):
         from flask import redirect
 
-        conn = get_conn()
+        conn = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         if not artifact:
             conn.close()
@@ -968,7 +1000,7 @@ button:hover{opacity:.85}
         artifact["engagement_id"] = engagement_id
         artifact["director_name"] = intake["director_name"]
 
-        conn = get_conn()
+        conn = get_workflow_store_conn()
         save_artifact(conn, engagement_id, artifact)
         conn.close()
 
@@ -977,7 +1009,7 @@ button:hover{opacity:.85}
 
     @app.route("/workflow/review/<engagement_id>")
     def workflow_review(engagement_id):
-        conn     = get_conn()
+        conn     = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         conn.close()
         if not artifact:
@@ -1058,7 +1090,7 @@ td{{padding:10px;border-bottom:1px solid #12121a;vertical-align:top}}
     def workflow_clear(engagement_id):
         from flask import request, redirect
 
-        conn     = get_conn()
+        conn     = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         if not artifact:
             conn.close()
@@ -1076,7 +1108,7 @@ td{{padding:10px;border-bottom:1px solid #12121a;vertical-align:top}}
 
     @app.route("/workflow/artifact/<engagement_id>")
     def workflow_artifact(engagement_id):
-        conn     = get_conn()
+        conn     = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         conn.close()
         if not artifact:
@@ -1264,7 +1296,7 @@ document.addEventListener("DOMContentLoaded", function () {{
     def workflow_export(engagement_id):
         from flask import jsonify
 
-        conn     = get_conn()
+        conn     = get_workflow_store_conn()
         artifact = load_artifact(conn, engagement_id)
         conn.close()
 
@@ -1279,7 +1311,7 @@ document.addEventListener("DOMContentLoaded", function () {{
     def workflow_list():
         from flask import jsonify
 
-        conn  = get_conn()
+        conn  = get_workflow_store_conn()
         items = list_artifacts(conn)
         conn.close()
         return jsonify(items)
