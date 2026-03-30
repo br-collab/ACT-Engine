@@ -29,6 +29,7 @@ import re
 import tempfile
 import uuid
 from html import escape
+from typing import Optional
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -234,6 +235,19 @@ def _parse_gap_analysis_json(text: str) -> dict:
     return json.loads(_extract_json_object(text))
 
 
+def _repair_json_deterministically(raw_text: str) -> Optional[dict]:
+    try:
+        from json_repair import repair_json
+    except ImportError:
+        return None
+
+    try:
+        repaired = repair_json(_extract_json_object(raw_text))
+        return json.loads(repaired)
+    except Exception:
+        return None
+
+
 def _repair_gap_analysis_json(client, raw_text: str, error_message: str = "") -> str:
     error_context = f"\nParsing error: {error_message}\n" if error_message else "\n"
     repair_prompt = f"""Repair the following malformed JSON into a single valid JSON object.
@@ -259,7 +273,14 @@ def _parse_model_json_with_repair(client, raw_text: str, max_repairs: int = 2) -
             return _parse_gap_analysis_json(current_text)
         except (json.JSONDecodeError, ValueError) as exc:
             last_error = exc
+            deterministic = _repair_json_deterministically(current_text)
+            if deterministic is not None:
+                return deterministic
             current_text = _repair_gap_analysis_json(client, current_text, str(exc))
+
+    deterministic = _repair_json_deterministically(current_text)
+    if deterministic is not None:
+        return deterministic
 
     raise last_error or ValueError("Unable to parse model JSON.")
 
