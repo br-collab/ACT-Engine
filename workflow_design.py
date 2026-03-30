@@ -324,12 +324,20 @@ def build_document_intake(form) -> dict:
     }
 
 
+def get_workflow_temp_dir(upload_dir: Path) -> Path:
+    if os.environ.get("VERCEL"):
+        return Path("/tmp")
+    return upload_dir
+
+
 def extract_document_text(file_storage, upload_dir: Path) -> str:
     ext = Path(file_storage.filename or "").suffix.lower()
     if ext not in (".pdf", ".docx", ".txt", ".csv"):
         raise ValueError("Unsupported file type")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=ext, dir=str(upload_dir)) as temp_file:
+    temp_dir = get_workflow_temp_dir(upload_dir)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext, dir=str(temp_dir)) as temp_file:
         temp_path = Path(temp_file.name)
     file_storage.save(temp_path)
 
