@@ -2,26 +2,28 @@
 {% block title %}Audit Log — Aureon{% endblock %}
 {% block content %}
 <div class="page">
-<div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between">
+<div class="page-header">
+<div class="page-header-row">
   <div>
     <div class="page-title">Decision system of record</div>
     <div class="page-sub">Immutable audit trail · All practices · Cryptographically fingerprinted</div>
   </div>
-  <div style="display:flex;gap:8px">
+  <div class="header-actions">
     <button class="btn {% if not practice %}active{% endif %}" onclick="loadAudit('all')">All</button>
     <button class="btn {% if practice=='transformation' %}active{% endif %}" onclick="loadAudit('transformation')">ACT</button>
     <button class="btn {% if practice=='onboarding' %}active{% endif %}" onclick="loadAudit('onboarding')">Onboarding</button>
   </div>
 </div>
+</div>
 
-<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+<div class="header-actions" style="margin-bottom:20px">
   {% for c in all_cases %}
   <button class="btn btn-sm" onclick="loadCase('{{ c.id }}')">{{ c.name }}</button>
   {% endfor %}
 </div>
 
-<div class="card" id="audit-container">
-  <div id="audit-log" style="display:flex;flex-direction:column"></div>
+<div class="audit-shell audit-system" id="audit-container">
+  <div id="audit-log"></div>
   <div id="audit-loading" style="text-align:center;padding:40px;color:var(--muted);font-size:13px">Loading audit log…</div>
 </div>
 </div>
@@ -62,19 +64,14 @@ function renderLog(rows) {
   }
   container.innerHTML = rows.map(r => `
     <div class="audit-row">
-      <span class="audit-tier ${r.tier}">${r.tier}</span>
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
-          <span style="font-size:12px;color:var(--text);font-weight:500">${r.event}</span>
-          <span style="font-size:10px;color:var(--muted2)">${r.case_id}</span>
-          <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--surface3);color:var(--muted)">
-            ${r.practice}
-          </span>
-        </div>
-        <div style="font-size:11px;color:var(--muted)">${r.actor} · ${r.created_at.slice(0,16).replace('T',' ')}</div>
-        ${r.detail ? `<div style="font-size:11px;color:var(--muted2);margin-top:3px">${r.detail.slice(0,160)}${r.detail.length>160?'…':''}</div>` : ''}
-        <div style="font-size:10px;color:var(--muted2);margin-top:3px;font-family:var(--mono)">⌗ ${r.fingerprint}</div>
+      <div class="audit-time">${r.created_at.slice(0,16).replace('T',' ')}<br><span class="audit-tier ${r.tier}">${r.tier}</span></div>
+      <div class="audit-action">
+        <div>${r.event}</div>
+        <div style="color:var(--muted-2);margin-top:4px">${r.case_id} · ${r.practice}</div>
+        ${r.detail ? `<div style="color:var(--muted);margin-top:6px">${r.detail.slice(0,160)}${r.detail.length>160?'…':''}</div>` : ''}
+        <div style="color:var(--muted-2);margin-top:6px">⌗ ${r.fingerprint}</div>
       </div>
+      <div class="audit-actor">${r.actor}</div>
     </div>`).join('');
 }
 

@@ -3,25 +3,27 @@
 {% block content %}
 <div class="page">
 
-<div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between">
+<div class="page-header">
+<div class="page-header-row">
   <div>
     <div class="page-title">Engagement portfolio</div>
     <div class="page-sub">Transformation + Onboarding · All active cases · Auto-updated</div>
   </div>
-  <div style="display:flex;gap:8px">
+  <div class="header-actions">
     <a href="/" class="btn btn-primary">Concept brief</a>
     <a href="/mapper" class="btn">Taxonomy mapper</a>
     <a href="/workflow" class="btn">Workflow design</a>
     <a href="/audit" class="btn">Audit log</a>
   </div>
 </div>
+</div>
 
-<div class="card" style="margin-bottom:20px;padding:18px 20px;background:linear-gradient(135deg, rgba(29,158,117,0.12), rgba(55,138,221,0.08));border-color:rgba(55,138,221,0.25)">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<div class="card doctrine-card portfolio-hero">
+  <div class="page-header-row">
     <div style="max-width:720px">
-      <div class="card-title" style="margin-bottom:8px;color:var(--text)">Stage 0 executive framing</div>
-      <div style="font-size:18px;line-height:1.35;color:var(--text);margin-bottom:6px">Aureon turns operational judgment into a visible, governable workflow.</div>
-      <div style="font-size:13px;color:var(--muted)">Open the one-page concept brief for the plain-language version of the problem, the solution, and why this matters now.</div>
+      <div class="kicker">Stage 0 executive framing</div>
+      <div style="font-size:22px;line-height:1.25;color:var(--text);margin:10px 0 6px;font-weight:700">Aureon turns operational judgment into a visible, governable workflow.</div>
+      <div class="page-sub">Open the one-page concept brief for the plain-language version of the problem, the solution, and why this matters now.</div>
     </div>
     <a href="/" class="btn btn-primary">Open one-pager</a>
   </div>
@@ -45,7 +47,7 @@
     <div class="metric-sub">{{ transformation|length }} ACT · {{ onboarding|length }} Onboarding</div>
   </div>
   <div class="metric">
-    <div class="metric-label">Workstreams on track</div>
+    <div class="metric-label">Workstreams</div>
     <div class="metric-value">{{ all_on.n }}/{{ all_ws.n }}</div>
     <div class="metric-sub {% if all_on.n == all_ws.n %}up{% else %}warn{% endif %}">
       {{ (all_on.n/all_ws.n*100)|int if all_ws.n else 0 }}% healthy
@@ -53,7 +55,7 @@
   </div>
   <div class="metric">
     <div class="metric-label">Blocking gates</div>
-    <div class="metric-value" style="color:{% if all_blocking.n > 0 %}var(--danger){% else %}var(--success){% endif %}">
+    <div class="metric-value {% if all_blocking.n > 0 %}metric-critical{% endif %}">
       {{ all_blocking.n }}
     </div>
     <div class="metric-sub {% if all_blocking.n > 0 %}down{% else %}up{% endif %}">
@@ -75,15 +77,14 @@
   <span class="practice-act">ACT Transformation</span>
   <span style="font-size:12px;color:var(--muted)">Aladdin platform implementations</span>
 </div>
+<div class="case-list">
 {% for c in transformation %}
-<a href="/case/{{ c.id }}" style="text-decoration:none;display:block;margin-bottom:10px">
-<div class="card" style="transition:border-color 0.15s;cursor:pointer"
-     onmouseover="this.style.borderColor='var(--accent)'"
-     onmouseout="this.style.borderColor='var(--border)'">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+<a href="/case/{{ c.id }}" class="case-link">
+<div class="case-card {% if c.blocking_gates > 0 %}case-blocking{% elif c.open_risks > 0 %}case-risk{% else %}case-healthy{% endif %}">
+  <div class="case-card-header">
     <div>
-      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px">{{ c.name }}</div>
-      <div style="font-size:12px;color:var(--muted)">{{ c.client }} · {{ c.module|upper }} ·
+      <div class="case-title">{{ c.name }}</div>
+      <div class="case-meta">{{ c.client }} · {{ c.module|upper }} ·
         {% if c.week %}Week {{ c.week }} of {{ c.total_weeks }}{% endif %}
       </div>
     </div>
@@ -97,21 +98,22 @@
       <span class="pill pill-blue">{{ c.overall_pct }}%</span>
     </div>
   </div>
-  <div style="display:flex;flex-direction:column;gap:7px">
+  <div class="case-workstreams">
     {% for ws in c.workstreams[:5] %}
-    <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:12px;color:var(--muted);width:220px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ws.name }}</span>
-      <div class="prog-track" style="flex:1">
+    <div class="workstream-row">
+      <span class="workstream-name">{{ ws.name }}</span>
+      <div class="prog-track">
         <div class="prog-fill {% if ws.status=='on_track' %}prog-green{% elif ws.status=='needs_attention' %}prog-amber{% else %}prog-gray{% endif %}"
              style="width:{{ ws.progress }}%"></div>
       </div>
-      <span style="font-size:11px;color:var(--muted);width:28px;text-align:right">{{ ws.progress }}%</span>
+      <span class="progress-label">{{ ws.progress }}%</span>
     </div>
     {% endfor %}
   </div>
 </div>
 </a>
 {% endfor %}
+</div>
 {% endif %}
 
 <!-- ONBOARDING -->
@@ -120,15 +122,14 @@
   <span class="practice-ob">Onboarding Intelligence</span>
   <span style="font-size:12px;color:var(--muted)">Institutional client activation</span>
 </div>
+<div class="case-list">
 {% for c in onboarding %}
-<a href="/case/{{ c.id }}" style="text-decoration:none;display:block;margin-bottom:10px">
-<div class="card" style="transition:border-color 0.15s;cursor:pointer"
-     onmouseover="this.style.borderColor='var(--accent3)'"
-     onmouseout="this.style.borderColor='var(--border)'">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+<a href="/case/{{ c.id }}" class="case-link">
+<div class="case-card {% if c.blocking_gates > 0 %}case-blocking{% elif c.open_risks > 0 %}case-risk{% else %}case-healthy{% endif %}">
+  <div class="case-card-header">
     <div>
-      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:2px">{{ c.name }}</div>
-      <div style="font-size:12px;color:var(--muted)">{{ c.client }} · Product: {{ c.module }} · Stage {{ c.stage }}/{{ c.total_stages }}</div>
+      <div class="case-title">{{ c.name }}</div>
+      <div class="case-meta">{{ c.client }} · Product: {{ c.module }} · Stage {{ c.stage }}/{{ c.total_stages }}</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       {% if c.blocking_gates > 0 %}
@@ -140,21 +141,22 @@
       <span class="pill pill-purple">Stage {{ c.stage }}</span>
     </div>
   </div>
-  <div style="display:flex;flex-direction:column;gap:7px">
+  <div class="case-workstreams">
     {% for ws in c.workstreams %}
-    <div style="display:flex;align-items:center;gap:10px">
-      <span style="font-size:12px;color:var(--muted);width:220px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ws.name }}</span>
-      <div class="prog-track" style="flex:1">
+    <div class="workstream-row">
+      <span class="workstream-name">{{ ws.name }}</span>
+      <div class="prog-track">
         <div class="prog-fill {% if ws.status=='on_track' %}prog-green{% elif ws.status=='needs_attention' %}prog-amber{% else %}prog-gray{% endif %}"
              style="width:{{ ws.progress }}%"></div>
       </div>
-      <span style="font-size:11px;color:var(--muted);width:28px;text-align:right">{{ ws.progress }}%</span>
+      <span class="progress-label">{{ ws.progress }}%</span>
     </div>
     {% endfor %}
   </div>
 </div>
 </a>
 {% endfor %}
+</div>
 {% endif %}
 
 </div>

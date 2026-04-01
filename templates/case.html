@@ -6,7 +6,8 @@
 {% set is_act = case.practice == 'transformation' %}
 {% set is_ob  = case.practice == 'onboarding' %}
 
-<div class="page-header" style="display:flex;align-items:flex-end;justify-content:space-between">
+<div class="page-header">
+<div class="page-header-row">
   <div>
     <div class="breadcrumb"><a href="/portfolio">Portfolio</a> / {{ case.name }}</div>
     <div class="page-title">{{ case.name }}</div>
@@ -18,10 +19,11 @@
       {% if case.week %}<span>· Week {{ case.week }} of {{ case.total_weeks }}</span>{% endif %}
     </div>
   </div>
-  <div style="display:flex;gap:8px">
+  <div class="header-actions">
     {% if is_act %}<a href="/mapper?case_id={{ case.id }}" class="btn">Taxonomy mapper</a>{% endif %}
     <button class="btn" onclick="fetchDigest()">Weekly digest</button>
   </div>
+</div>
 </div>
 
 <!-- METRICS -->
@@ -72,13 +74,13 @@
   <div class="card">
     <div class="card-title">Workstream status</div>
     {% for w in ws %}
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:13px;color:var(--text);width:200px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.name }}</span>
-      <div class="prog-track" style="flex:1">
+    <div class="workstream-row" style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <span class="workstream-name">{{ w.name }}</span>
+      <div class="prog-track">
         <div class="prog-fill {% if w.status=='on_track' %}prog-green{% elif w.status=='needs_attention' %}prog-amber{% else %}prog-gray{% endif %}"
              style="width:{{ w.progress }}%"></div>
       </div>
-      <span style="font-size:11px;color:var(--muted);width:28px;text-align:right">{{ w.progress }}%</span>
+      <span class="progress-label">{{ w.progress }}%</span>
       <span class="pill {% if w.status=='on_track' %}pill-green{% elif w.status=='needs_attention' %}pill-amber{% else %}pill-gray{% endif %}" style="width:72px;text-align:center">
         {% if w.status=='on_track' %}On track{% elif w.status=='needs_attention' %}Attention{% else %}Not started{% endif %}
       </span>
@@ -134,10 +136,9 @@
     <div class="card-title">Open risks</div>
     {% if case.risks %}
       {% for r in case.risks %}
-      <div style="padding:10px;background:var(--surface2);border-radius:7px;margin-bottom:8px;
-                  border-left:3px solid {% if r.severity=='red' %}var(--danger){% else %}var(--warn){% endif %}">
-        <div style="font-size:13px;font-weight:500;color:{% if r.severity=='red' %}#f07070{% else %}#f0b84a{% endif %};margin-bottom:3px">{{ r.title }}</div>
-        <div style="font-size:12px;color:var(--muted)">{{ r.description }}</div>
+      <div class="risk-item {% if r.severity=='red' %}risk-red{% endif %}">
+        <div class="risk-title" style="color:{% if r.severity=='red' %}var(--danger){% else %}var(--warning){% endif %}">{{ r.title }}</div>
+        <div class="timeline-detail">{{ r.description }}</div>
       </div>
       {% endfor %}
     {% else %}
@@ -147,16 +148,14 @@
 
   <div class="card">
     <div class="card-title">Decision system of record</div>
-    <div style="max-height:260px;overflow-y:auto">
+    <div class="timeline" style="max-height:260px;overflow-y:auto">
       {% for entry in case.audit[:12] %}
-      <div class="audit-row">
+      <div class="timeline-item">
+        <div class="timeline-time">{{ entry.created_at[:16].replace('T',' ') }} · {{ entry.actor }}</div>
+        <div class="timeline-title">{{ entry.event }}</div>
+        {% if entry.detail %}<div class="timeline-detail">{{ entry.detail[:100] }}{% if entry.detail|length > 100 %}…{% endif %}</div>{% endif %}
+        <div class="timeline-fingerprint">⌗ {{ entry.fingerprint }}</div>
         <span class="audit-tier {{ entry.tier }}">{{ entry.tier }}</span>
-        <div style="flex:1">
-          <div style="font-size:12px;color:var(--text);font-weight:500">{{ entry.event }}</div>
-          <div style="font-size:11px;color:var(--muted)">{{ entry.actor }} · {{ entry.created_at[:16].replace('T',' ') }}</div>
-          {% if entry.detail %}<div style="font-size:11px;color:var(--muted2);margin-top:2px">{{ entry.detail[:100] }}{% if entry.detail|length > 100 %}…{% endif %}</div>{% endif %}
-          <div style="font-size:10px;color:var(--muted2);margin-top:2px;font-family:var(--mono)">⌗ {{ entry.fingerprint }}</div>
-        </div>
       </div>
       {% endfor %}
     </div>
